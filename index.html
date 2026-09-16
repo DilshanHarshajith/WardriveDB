@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WardriveDB – Wardriving Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css">
+<link rel="stylesheet" href="static/css/style.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+</head>
+<body>
+<div class="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <h1>◉ Wardrive<span>DB</span></h1>
+    <div id="fileSelector" class="file-selector" style="display:none; align-items:center; gap:10px; padding:0 15px; border-left:1px solid #30363d; border-right:1px solid #30363d; opacity:1;">
+      <span style="font-size:12px; color:var(--muted)">Files:</span>
+      <div id="fileCheckboxes" style="display:flex; gap:10px; flex-wrap:wrap; max-width:300px; max-height:40px; overflow-y:auto;"></div>
+    </div>
+    <div class="stat-pills" id="topStats"></div>
+    <div class="spacer"></div>
+    <input type=search id="globalSearch" placeholder="Search SSID / MAC … (/regex/ ok)">
+    <button class="btn" id="btnSQL" title="Open SQL editor">⌘ SQL</button>
+    <button class="btn btn-success" id="btnExport">⤓ Export</button>
+    <button class="btn btn-danger" id="btnResetFilters">↻ Reset</button>
+    <button class="btn" id="btnLoadData">↑ Load data</button>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="section" id="secType">
+      <div class="section-header">Network Type</div>
+      <div class="section-body"><div class="chip-group" id="chipsType"></div></div>
+    </div>
+    <div class="section" id="secAuth">
+      <div class="section-header">Auth Mode</div>
+      <div class="section-body"><div class="chip-group" id="chipsAuth"></div></div>
+    </div>
+    <div class="section" id="secChannel">
+      <div class="section-header">Channel</div>
+      <div class="section-body">
+        <div class="field">
+          <div class="range-row">
+            <input type=range id="chMin" min="0" max="196" value="0">
+            <span class="range-val" id="chMinVal">0</span>
+            <span style="color:var(--muted)">–</span>
+            <input type=range id="chMax" min="0" max="196" value="196">
+            <span class="range-val" id="chMaxVal">196</span>
+          </div>
+          <div class="num-row">
+            <span style="color:var(--muted);font-size:11px">min</span>
+            <input type="number" id="chMinText" min="0" max="196" value="0" step="1" title="Min channel">
+            <span style="color:var(--muted)">–</span>
+            <input type="number" id="chMaxText" min="0" max="196" value="196" step="1" title="Max channel">
+            <span style="color:var(--muted);font-size:11px">max</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="secRSSI">
+      <div class="section-header">RSSI (signal strength)</div>
+      <div class="section-body">
+        <div class="field">
+          <div class="range-row">
+            <input type=range id="rssiMin" min="-120" max="-10" value="-120">
+            <span class="range-val" id="rssiMinVal">-120</span>
+            <span style="color:var(--muted)">–</span>
+            <input type=range id="rssiMax" min="-120" max="-10" value="-10">
+            <span class="range-val" id="rssiMaxVal">-10</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="secDate">
+      <div class="section-header">First Seen (date range)</div>
+      <div class="section-body">
+        <div class="field">
+          <div class="range-row">
+            <input type="date" id="dateFrom">
+            <span style="color:var(--muted)">to</span>
+            <input type="date" id="dateTo">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="secAccuracy">
+      <div class="section-header">Accuracy (meters)</div>
+      <div class="section-body">
+        <div class="field">
+          <div class="range-row">
+            <input type=range id="accMax" min="5" max="200" value="200" step="5">
+            <span class="range-val" id="accMaxVal">≤ 200 m</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="secFreq">
+      <div class="section-header">Frequency (MHz)</div>
+      <div class="section-body">
+        <div class="field">
+          <div class="range-row">
+            <input type=range id="freqMin" min="0" max="6000" value="0" step="10">
+            <span class="range-val" id="freqMinVal">0</span>
+            <span style="color:var(--muted)">–</span>
+            <input type=range id="freqMax" min="0" max="6000" value="6000" step="10">
+            <span class="range-val" id="freqMaxVal">6000</span>
+          </div>
+          <div class="num-row">
+            <span style="color:var(--muted);font-size:11px">min</span>
+            <input type="number" id="freqMinText" min="0" max="6000" value="0" step="10" title="Min frequency (MHz)">
+            <span style="color:var(--muted)">–</span>
+            <input type="number" id="freqMaxText" min="0" max="6000" value="6000" step="10" title="Max frequency (MHz)">
+            <span style="color:var(--muted);font-size:11px">max</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="secDisplay">
+      <div class="section-header">Display</div>
+      <div class="section-body">
+        <div class="field"><label>Map style</label>
+          <select id="mapStyle">
+            <option value="osm" selected>OpenStreetMap</option>
+            <option value="sat">Satellite (Esri)</option>
+          </select>
+        </div>
+        <div class="field"><label>Marker size (base px)</label>
+          <div class="range-row">
+            <input type=range id="markerSize" min="3" max="12" value="5">
+            <span class="range-val" id="markerSizeVal">5</span>
+          </div>
+        </div>
+        <div class="field"><label>Opacity (min)</label>
+          <div class="range-row">
+            <input type=range id="opacMin" min="5" max="100" value="25">
+            <span class="range-val" id="opacMinVal">0.25</span>
+          </div>
+        </div>
+        <div class="action-row">
+          <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+            <input type=checkbox id="chkHeat"> Heatmap layer
+          </label>
+          <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+            <input type=checkbox id="chkCluster" checked> Cluster
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="secAdv">
+      <div class="section-header">Advanced filter (SQL WHERE fragment)</div>
+      <div class="section-body">
+        <div class="field">
+          <textarea id="advSQL" placeholder="Example: ssid LIKE '%Dialog%' AND rssi > -60"></textarea>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-primary" id="btnApplyAdv">Apply advanced filter</button>
+          <button class="btn" id="btnClearAdv">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main map + bottom table -->
+  <div class="main" id="mainArea">
+    <div id="map"></div>
+    <div class="map-overlay">
+      <button class="btn" id="btnFitBounds" title="Fit map to current results">⊞ Fit to data</button>
+    </div>
+    <div class="map-legend" id="mapLegend">
+      <div><b>Legend</b></div>
+      <div><span class="dot" style="background:#58a6ff"></span> WIFI</div>
+      <div><span class="dot" style="background:#3fb950"></span> BLE</div>
+      <div><span class="dot" style="background:#d29922"></span> BT</div>
+      <div><span class="dot" style="background:#d2a8ff"></span> LTE</div>
+      <div><span class="dot" style="background:#f85149"></span> GSM</div>
+      <div style="margin-top:4px; color:var(--muted); font-size:10px">Click marker for details</div>
+    </div>
+    <div class="bottom-panel" id="bottomPanel" style="height:200px">
+      <div class="bottom-handle" id="bottomHandle">
+        <span id="tableTitle">Results</span>
+        <span id="tableInfo" style="font-size:11px"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Details drawer -->
+<div class="modal-bg hidden" id="detailsModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><h3 id="detailsTitle">Network details</h3><button class="btn" id="btnCloseDetails">✕</button></div>
+    <div class="modal-body" id="detailsBody"></div>
+    <div class="modal-foot" style="justify-content:flex-end"><button class="btn" id="btnCloseDetails2">Close</button></div>
+  </div>
+</div>
+
+<!-- Upload overlay (shown when no dataset is loaded) -->
+<div class="upload-overlay hidden" id="uploadOverlay">
+  <div class="upload-box" id="uploadBox">
+    <h2>Load your wardriving data</h2>
+    <p>Drag &amp; drop <b>.db</b> (SQLite) or <b>.csv</b> (Wigle export) files here, or click to browse (multi‑select supported).<br>
+      Data is kept in memory only — nothing is written to disk.</p>
+    <input type="file" id="uploadInput" accept=".db,.csv" multiple class="hidden">
+    <button class="btn btn-primary" id="btnPickFile">Choose file</button>
+    <div class="formats">Supported: <code>*.db</code> (networks table) or Wigle <code>WigleWifi_*.csv</code></div>
+    <div class="upload-progress hidden" id="uploadProgress"><div class="bar"><div class="bar-fill" id="uploadBar"></div></div></div>
+    <div class="upload-msg" id="uploadMsg"></div>
+  </div>
+</div>
+
+<!-- SQL Modal -->
+<div class="modal-bg hidden" id="sqlModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>SQL query editor</h3>
+      <button class="btn" id="btnCloseSQL">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>SELECT query (read‑only; runs against the loaded data)</label>
+        <textarea id="sqlText" rows="5">SELECT * FROM networks LIMIT 100</textarea>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-primary" id="btnRunSQL">▶ Run</button>
+        <button class="btn" id="btnExportSQL">⤓ Export results</button>
+        <span id="sqlMsg" class="msg"></span>
+      </div>
+      <div class="results hidden" id="sqlResults"></div>
+    </div>
+  </div>
+</div>
+
+<!-- App scripts. Order matters: each file depends on globals from the ones before it. -->
+<script src="static/js/config.js"></script>
+<script src="static/js/state.js"></script>
+<script src="static/js/utils.js"></script>
+<script src="static/js/api.js"></script>
+<script src="static/js/map.js"></script>
+<script src="static/js/sidebar.js"></script>
+<script src="static/js/table.js"></script>
+<script src="static/js/upload.js"></script>
+<script src="static/js/sql.js"></script>
+<script src="static/js/app.js"></script>
+</body>
+</html>
