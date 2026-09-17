@@ -9,3 +9,4 @@ services:
     volumes:
       - ${DATA_DIR:-.}:/data
     read_only: true
+    restart: 'unless-stopped'
