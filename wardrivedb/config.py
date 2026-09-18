@@ -1,5 +1,6 @@
-"""Shared constants, regexes, and CSV mapping for WardriveDB."""
+"""Shared constants, regexes, and column mappings for WardriveDB."""
 
+import json
 import os
 import re
 from pathlib import Path
@@ -23,18 +24,12 @@ FORBIDDEN_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Wigle CSV header name (lowercased, stripped) → DB column
-CSV_COL_MAP = {
-    "mac":              "mac",
-    "ssid":             "ssid",
-    "authmode":         "auth_mode",
-    "firstseen":        "first_seen",
-    "channel":          "channel",
-    "frequency":        "frequency",
-    "rssi":             "rssi",
-    "currentlatitude":  "latitude",
-    "currentlongitude": "longitude",
-    "altitudemeters":   "altitude",
-    "accuracymeters":   "accuracy",
-    "type":             "type",
-}
+# Column mappings live in columns.json (CSV headers and .db table columns differ):
+#   - CSV_COL_MAP: Wigle export headers (lowercased, stripped) → DB column
+#   - DB_COL_MAP:  uploaded networks-table columns → DB column (null = ignored)
+_MAPS_FILE = Path(__file__).parent / "columns.json"
+with open(_MAPS_FILE, encoding="utf-8") as _f:
+    _COLUMN_MAPS = json.load(_f)
+
+CSV_COL_MAP = _COLUMN_MAPS.get("csv", {})
+DB_COL_MAP = _COLUMN_MAPS.get("db", {})

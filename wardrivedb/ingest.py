@@ -4,7 +4,7 @@ import csv
 import os
 import tempfile
 
-from wardrivedb.config import CSV_COL_MAP
+from wardrivedb.config import CSV_COL_MAP, DB_COL_MAP
 from wardrivedb.db import get_conn
 
 
@@ -27,6 +27,8 @@ def parse_csv_upload(content: str) -> list[dict]:
     for row in reader:
         mapped = {}
         for csv_col, db_col in CSV_COL_MAP.items():
+            if db_col is None:
+                continue
             # Case-insensitive CSV header lookup
             val = None
             for k, v in row.items():
@@ -179,18 +181,37 @@ def load_db_file(data: bytes, filename: str):
         # Copy data with file_id
         count = conn.execute("SELECT COUNT(*) FROM uploaded.networks").fetchone()[0]
         if count > 0:
-            # Get column names from uploaded table (excluding id if present)
-            columns = [row[1] for row in conn.execute("PRAGMA uploaded.table_info(networks)").fetchall()
-                      if row[1] != 'id' and row[1] != 'file_id']
-            cols_str = ', '.join(columns)
-            placeholders = ', '.join(['?'] + ['?' for _ in columns])
+            # Map uploaded columns → our network columns via DB_COL_MAP.
+            # Unmapped or null-mapped columns (e.g. rcois, mfgr_id) are skipped.
+            up_cols = [row[1] for row in conn.execute("PRAGMA uploaded.table_info(networks)").fetchall()
+                      if row[1] and row[1].lower() not in ("id", "file_id")]
+            db_map = {k.lower(): v for k, v in DB_COL_MAP.items()}
+            target_cols = {r[1].lower() for r in conn.execute("PRAGMA table_info(networks)").fetchall()}
+            insert_cols = []
+            source_exprs = []
+            seen = set()
+            for col in up_cols:
+                target = db_map.get(col.lower())
+                if target is None or target.lower() not in target_cols or target in seen:
+                    continue
+                seen.add(target)
+                source_exprs.append(f'"{col}" AS "{target}"')
+                insert_cols.append(target)
+            if not insert_cols:
+                conn.execute("DETACH DATABASE uploaded")
+                raise ValueError(
+                    "No mapped columns found in uploaded networks table; "
+                    f"columns present: {', '.join(up_cols) or '(none)'}"
+                )
+            cols_str = ', '.join(insert_cols)
+            exprs_str = ', '.join(source_exprs)
             conn.execute(f"""
                 INSERT INTO networks (file_id, {cols_str})
-                SELECT ?, {cols_str} FROM uploaded.networks
+                SELECT ?, {exprs_str} FROM uploaded.networks
             """, (file_id,))
 
-        conn.execute("DETACH DATABASE uploaded")
         conn.commit()
+        conn.execute("DETACH DATABASE uploaded")
         update_file_count(file_id, count)
         return count
     except Exception:

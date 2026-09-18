@@ -35,6 +35,10 @@ async function doUpload(files) {
     const r = await fetch(API + '/api/upload', {method:'POST', body: fd});
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'Upload failed');
+    if (j.ok === false) {
+      const errs = (j.files || []).map(f => f.error ? `${f.filename}: ${f.error}` : f.filename).join('; ');
+      throw new Error(errs || 'Upload failed');
+    }
 
     $('#uploadBar').style.width='100%';
 

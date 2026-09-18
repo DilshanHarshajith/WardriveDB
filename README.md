@@ -37,8 +37,10 @@ WARDRIVING_DB=/path/to/wardriving.db ./start.sh
 
 | Format | Notes |
 |--------|-------|
-| **SQLite `.db`** | Must contain a `networks` table with columns: `mac`, `ssid`, `auth_mode`, `first_seen`, `channel`, `frequency`, `rssi`, `latitude`, `longitude`, `altitude`, `accuracy`, `type` |
+| **SQLite `.db`** | Must contain a `networks` table. Columns are mapped automatically to `mac`, `ssid`, `auth_mode`, `first_seen`, `channel`, `frequency`, `rssi`, `latitude`, `longitude`, `altitude`/`accuracy`, `type`; both `altitude_meters`/`accuracy_meters` (Wigle export) and `altitude`/`accuracy` names are recognised. |
 | **Wigle CSV** | Standard Wigle export (`WigleWifi_1.x`). The metadata line is skipped automatically. |
+
+Column mappings for both formats are editable in `wardrivedb/columns.json` — add an entry whose value is the target `networks` column, or `null` to ignore the source column.
 
 ## Keyboard Shortcuts
 
@@ -89,7 +91,8 @@ WardriveDB/
 ├── wardrivedb/          # Python package (backend)
 │   ├── __init__.py
 │   ├── __main__.py      # Enables `python -m wardrivedb`
-│   ├── config.py        # Constants, regexes, CSV column map
+│   ├── config.py        # Constants, regexes, loads column maps from columns.json
+│   ├── columns.json     # CSV header / .db column → networks column mappings
 │   ├── db.py            # SQLite in-memory connection & schema
 │   ├── ingest.py        # CSV / .db upload parsing + loading
 │   ├── query.py         # Shared filter → SQL WHERE builder
