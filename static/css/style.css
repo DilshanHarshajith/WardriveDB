@@ -40,7 +40,7 @@ code { background: var(--panel); padding: 2px 6px; border-radius: var(--radius-s
 .file-unload:hover { color: var(--danger); background: rgba(248,81,73,.12); }
 
 /* Sidebar sections */
-.section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; flex-shrink: 0; }
 .section-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; cursor: pointer; user-select: none; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
 .section-header:hover { background: var(--hover); }
 .section-body { padding: 0 10px 10px; }
