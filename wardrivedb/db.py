@@ -75,6 +75,27 @@ def get_files():
         return []
 
 
+def get_file(file_id: int):
+    """Return a single file record as a dict, or None."""
+    try:
+        row = get_conn().execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+        return dict(row) if row else None
+    except Exception:
+        return None
+
+
+def remove_file(file_id: int) -> int:
+    """Unload a file: delete its networks rows and its files record.
+
+    Returns the number of networks removed.
+    """
+    conn = get_conn()
+    cur = conn.execute("DELETE FROM networks WHERE file_id = ?", (file_id,))
+    conn.execute("DELETE FROM files WHERE id = ?", (file_id,))
+    conn.commit()
+    return cur.rowcount
+
+
 def add_file(filename: str) -> int:
     """Add a new file record and return its ID."""
     conn = get_conn()

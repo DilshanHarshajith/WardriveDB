@@ -45,6 +45,8 @@ class Handler(SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/upload":
             self._handle_api_upload()
+        elif parsed.path == "/api/unload":
+            self._handle_api_unload()
         elif parsed.path == "/api/query":
             self._handle_api_query()
         else:
@@ -225,6 +227,40 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"ok": True, "count": total_count, "filename": files[0][0]})
         else:
             self._json({"ok": len(errors) == 0, "files": results, "total_count": total_count})
+
+    # ── /api/unload ────────────────────────────────────────────────────────
+    def _handle_api_unload(self):
+        """Remove a loaded file (and its networks) from the in-memory DB."""
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length) if length else b"{}"
+        try:
+            payload = json.loads(body)
+        except Exception:
+            self._json({"error": "Invalid JSON body"}, 400)
+            return
+        file_id = payload.get("file_id")
+        if file_id is None:
+            self._json({"error": "Missing 'file_id' field"}, 400)
+            return
+        try:
+            file_id = int(file_id)
+        except (ValueError, TypeError):
+            self._json({"error": "Invalid 'file_id'"}, 400)
+            return
+
+        from wardrivedb.db import get_file, remove_file
+        f = get_file(file_id)
+        if not f:
+            self._json({"error": f"No file with id {file_id} is loaded"}, 404)
+            return
+        removed = remove_file(file_id)
+        self._json({
+            "ok": True,
+            "file_id": file_id,
+            "filename": f["filename"],
+            "removed": removed,
+            "total_remaining": network_count(),
+        })
 
     # ── /api/query ─────────────────────────────────────────────────────────
     def _handle_api_query(self):

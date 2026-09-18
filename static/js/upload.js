@@ -79,6 +79,39 @@ async function doUpload(files) {
 
 function isUploadVisible() { return !$('#uploadOverlay').classList.contains('hidden'); }
 
+async function unloadFile(fileId) {
+  const file = loadedFiles.find(f => String(f.id) === String(fileId));
+  if (!file) { console.warn('Unknown file id', fileId); return; }
+  if (!confirm(`Unload "${file.filename}" from memory? Its networks will be removed from the dashboard (you can re-upload the file anytime).`)) return;
+
+  try {
+    await apiPost('/api/unload', { file_id: Number(fileId) });
+  } catch(e) {
+    alert('Failed to unload: ' + e.message);
+    return;
+  }
+
+  metaInfo = await api('/api/meta');
+  loadedFiles = (await api('/api/files')).files || [];
+  activeFileIds.delete(String(fileId));
+
+  if (!loadedFiles.length) {
+    // Nothing left loaded — revert to the empty dashboard + upload prompt
+    resetAllFilters();
+    renderFileCheckboxes();
+    await refresh();
+    showUpload();
+    return;
+  }
+
+  if (activeFileIds.size === 0) {
+    loadedFiles.forEach(f => activeFileIds.add(String(f.id)));
+  }
+  renderSidebar();
+  renderFileCheckboxes();
+  await refresh();
+}
+
 function bindUploadEvents() {
   $('#btnPickFile').onclick = () => $('#uploadInput').click();
   $('#uploadInput').addEventListener('change', e => {

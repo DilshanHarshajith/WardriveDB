@@ -49,8 +49,20 @@ function renderFileCheckboxes() {
       debounceRefresh();
     };
 
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'file-unload';
+    btn.title = 'Unload this file from memory';
+    btn.textContent = '✕';
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      unloadFile(file.id);
+    };
+
     label.appendChild(checkbox);
     label.appendChild(document.createTextNode(file.filename.split('/').pop()));
+    label.appendChild(btn);
     container.appendChild(label);
   });
 }
