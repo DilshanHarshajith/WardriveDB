@@ -22,7 +22,6 @@ function buildParams() {
     date_from: state.dateFrom, date_to: state.dateTo,
     q: state.q, adv: state.advSQL,
     sort: state.sort, dir: state.sortDir,
-    limit: state.limit, offset: state.offset,
   };
   // File filtering — only send when the user has unchecked something;
   // omitted (or "all selected" = all loadedFiles IDs) = no constraint, show everything

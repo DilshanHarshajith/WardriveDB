@@ -26,17 +26,18 @@ const debounceRefresh = debounce(refresh, 200);
 
 async function refresh() {
   const epoch = ++refreshEpoch;   // invalidate any earlier in-flight refresh
-  const p = buildParams();
   try {
-    const [data, stats] = await Promise.all([api('/api/data', p), api('/api/stats', p)]);
+    // No pagination — the backend returns every row matching the filters, so
+    // the table and map both show the complete result set.
+    const [data, stats] = await Promise.all([api('/api/data', buildParams()), api('/api/stats', buildParams())]);
     if (epoch !== refreshEpoch) return;   // superseded by a newer refresh — discard
     currentRows = data.rows || [];
     totalCount = data.total || 0;
-    renderMap(data.rows || []);
+    renderMap(currentRows);
     renderTable();
     updateTopStats();
     $('#tableTitle').textContent = `Results (${(data.total||0).toLocaleString()})`;
-    $('#tableInfo').textContent = `Showing ${state.offset+1}–${Math.min(state.offset+state.limit, data.total||0)} of ${(data.total||0).toLocaleString()}`;
+    $('#tableInfo').textContent = `${(data.total||0).toLocaleString()} networks`;
   } catch(e) { console.error('Refresh failed:', e); }
 }
 

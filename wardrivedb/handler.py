@@ -89,10 +89,15 @@ class Handler(SimpleHTTPRequestHandler):
         if sort_dir.lower() not in ("asc", "desc"):
             sort_dir = "desc"
 
-        try:
-            limit = max(1, min(int(qs.get("limit", ["5000"])[0]), 20000))
-        except (ValueError, TypeError):
-            limit = 5000
+        # Optional limit/offset — no default hard cap. When omitted, the full
+        # filtered result set is returned so the table and map show every match.
+        limit = None
+        raw_limit = qs.get("limit", [None])[0]
+        if raw_limit is not None and str(raw_limit) != "":
+            try:
+                limit = max(1, int(raw_limit))
+            except (ValueError, TypeError):
+                limit = None
         try:
             offset = max(0, int(qs.get("offset", ["0"])[0]))
         except (ValueError, TypeError):
@@ -101,10 +106,12 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             count = conn.execute(f"SELECT COUNT(*) FROM networks{where}", params).fetchone()[0]
             order = f" ORDER BY {sort_field} {sort_dir.upper()}"
-            rows = conn.execute(
-                f"SELECT * FROM networks{where}{order} LIMIT ? OFFSET ?",
-                (*params, limit, offset),
-            ).fetchall()
+            sql = f"SELECT * FROM networks{where}{order}"
+            row_args = params
+            if limit is not None:
+                sql += " LIMIT ? OFFSET ?"
+                row_args = (*params, limit, offset)
+            rows = conn.execute(sql, row_args).fetchall()
             self._json({"rows": [dict(r) for r in rows], "total": count, "limit": limit, "offset": offset})
         except Exception as e:
             self._json({"error": str(e)}, 500)
