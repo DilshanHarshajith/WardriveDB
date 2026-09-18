@@ -1,57 +1,53 @@
-"""In-memory SQLite database for WardriveDB."""
+"""In-memory SQLite database for WardriveDB (one per browser session)."""
 
-import re
-import sqlite3
+from wardrivedb import session as sessions
 
-_CONN = None
+_FILES_SCHEMA = """
+    CREATE TABLE IF NOT EXISTS files (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename    TEXT UNIQUE NOT NULL,
+        upload_time TEXT NOT NULL,
+        row_count   INTEGER DEFAULT 0
+    )
+"""
+
+_NETWORKS_SCHEMA = """
+    CREATE TABLE IF NOT EXISTS networks (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_id     INTEGER NOT NULL,
+        mac         TEXT,
+        ssid        TEXT,
+        auth_mode   TEXT,
+        first_seen  TEXT,
+        channel     INTEGER,
+        frequency   REAL,
+        rssi        INTEGER,
+        latitude    REAL,
+        longitude   REAL,
+        altitude    REAL,
+        accuracy    REAL,
+        type        TEXT,
+        FOREIGN KEY (file_id) REFERENCES files(id)
+    )
+"""
 
 
 def get_conn():
-    """Return the shared in-memory SQLite connection (created once)."""
-    global _CONN
-    if _CONN is None:
-        _CONN = sqlite3.connect(":memory:", check_same_thread=False)
-        _CONN.row_factory = sqlite3.Row
-        _CONN.create_function(
-            "REGEXP", 2,
-            lambda pat, val: 1 if (val and re.search(pat, val, re.IGNORECASE)) else 0,
-        )
-    return _CONN
+    """Return the current browser session's in-memory connection."""
+    return sessions.current_conn()
+
+
+def create_schema(conn):
+    conn.execute("DROP TABLE IF EXISTS networks")
+    conn.execute("DROP TABLE IF EXISTS files")
+    conn.execute(_FILES_SCHEMA)
+    conn.execute(_NETWORKS_SCHEMA)
+    conn.commit()
 
 
 def ensure_empty():
-    """Create a fresh empty networks table (used when no dataset is loaded)."""
-    conn = get_conn()
-    conn.execute("DROP TABLE IF EXISTS networks")
-    conn.execute("DROP TABLE IF EXISTS files")
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS files (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename    TEXT UNIQUE NOT NULL,
-            upload_time TEXT NOT NULL,
-            row_count   INTEGER DEFAULT 0
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS networks (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            file_id     INTEGER NOT NULL,
-            mac         TEXT,
-            ssid        TEXT,
-            auth_mode   TEXT,
-            first_seen  TEXT,
-            channel     INTEGER,
-            frequency   REAL,
-            rssi        INTEGER,
-            latitude    REAL,
-            longitude   REAL,
-            altitude    REAL,
-            accuracy    REAL,
-            type        TEXT,
-            FOREIGN KEY (file_id) REFERENCES files(id)
-        )
-    """)
-    conn.commit()
+    """Reset the current session's tables (used when no dataset is loaded)."""
+    create_schema(get_conn())
 
 
 def network_count() -> int:

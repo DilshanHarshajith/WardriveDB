@@ -2,8 +2,10 @@
 
 import json
 import urllib.parse
+import uuid
 from http.server import SimpleHTTPRequestHandler
 
+from wardrivedb import session as sessions
 from wardrivedb.config import AUTH_CATEGORY_SQL, FORBIDDEN_RE, MAX_UPLOAD, ROOT, SELECT_RE
 from wardrivedb.db import get_conn, network_count
 from wardrivedb.ingest import load_csv, load_db_file, parse_multipart
@@ -15,6 +17,23 @@ class Handler(SimpleHTTPRequestHandler):
     # browser already maps to fresh connections; combined with the threaded
     # server this guarantees one client can never pin/block another.
     protocol_version = "HTTP/1.0"
+
+    def _resolve_session(self):
+        """Resolve the browser session from the cookie and bind it to this thread.
+
+        A fresh session id is issued (via Set-Cookie in end_headers) when the
+        client has none, so each browser gets an isolated in-memory dataset.
+        """
+        sid = None
+        for part in self.headers.get("Cookie", "").split(";"):
+            part = part.strip()
+            if part.startswith(sessions.SESSION_COOKIE + "="):
+                sid = part.split("=", 1)[1].strip()
+                break
+        if not sid or len(sid) != 32:
+            sid = uuid.uuid4().hex
+            self._new_sid = sid
+        sessions.bind(sid)
 
     def translate_path(self, path):
         path = urllib.parse.unquote(path.split("?")[0].split("#")[0])
@@ -28,6 +47,7 @@ class Handler(SimpleHTTPRequestHandler):
         return str(target)
 
     def do_GET(self):
+        self._resolve_session()
         parsed = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(parsed.query)
         if parsed.path == "/api/data":
@@ -42,6 +62,7 @@ class Handler(SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self):
+        self._resolve_session()
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/upload":
             self._handle_api_upload()
@@ -308,6 +329,13 @@ class Handler(SimpleHTTPRequestHandler):
             self.close_connection = True
 
     def end_headers(self):
+        new_sid = getattr(self, "_new_sid", None)
+        if new_sid:
+            self.send_header(
+                "Set-Cookie",
+                f"{sessions.SESSION_COOKIE}={new_sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000",
+            )
+            self._new_sid = None
         if self.path.endswith((".html", ".js", ".css")):
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()

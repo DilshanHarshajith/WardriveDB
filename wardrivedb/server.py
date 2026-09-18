@@ -4,10 +4,9 @@ import os
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
+from wardrivedb import session as sessions
 from wardrivedb.config import PORT
-from wardrivedb.db import ensure_empty, get_conn, network_count
 from wardrivedb.handler import Handler
-from wardrivedb.ingest import load_db_file
 
 
 def create_server(port: int = PORT) -> ThreadingHTTPServer:
@@ -22,25 +21,30 @@ def create_server(port: int = PORT) -> ThreadingHTTPServer:
 
 
 def main():
-    # If a DB path was given via env, load it on startup
+    # If a DB path was given via env, register it as the per-session seed so
+    # every new visitor's session starts with that dataset. Sessions are
+    # otherwise empty — upload a .db or .csv file via the browser UI.
     env_db = os.environ.get("WARDRIVING_DB", "")
     if env_db:
         p = Path(env_db)
         if p.is_file():
-            ensure_empty()
+            sessions.set_seed(p.read_bytes(), str(p))
             try:
-                data = p.read_bytes()
-                load_db_file(data)
-                print(f"Loaded database from {p}  ({network_count()} networks)")
+                # Validate the seed by loading it into a throwaway session.
+                sessions.bind("__startup_probe__")
+                probe = sessions.get_or_create("__startup_probe__")
+                n = probe.conn.execute("SELECT COUNT(*) FROM networks").fetchone()[0]
+                print(f"Seed ready: {p}  ({n} networks per new session)")
             except Exception as e:
-                ensure_empty()
+                sessions.set_seed(None)
                 print(f"[warn] Could not load {p}: {e}")
+            finally:
+                sessions.drop("__startup_probe__")
+                sessions.bind(None)
         else:
-            ensure_empty()
-            print(f"[warn] WARDRIVING_DB points to {p} but it does not exist — starting empty.")
+            print(f"[warn] WARDRIVING_DB points to {p} but it does not exist — sessions start empty.")
     else:
-        ensure_empty()
-        print("No dataset loaded — upload a .db or .csv file via the browser UI.")
+        print("No seed dataset configured — each session starts empty; upload a .db/.csv via the browser UI.")
 
     httpd = create_server(PORT)
     print(f"WardriveDB serving http://localhost:{PORT}")
