@@ -36,7 +36,6 @@ function highlightSelection() {
 function renderMap(rows) {
   markersLayer.clearLayers();
   markerById.clear();
-  if (heatLayer._map) map.removeLayer(heatLayer);
   if (selectedId !== null && !rows.some(r => String(r.id) === String(selectedId))) { selectedId = null; }
   const heatPts = [];
   const bounds = [];
@@ -62,10 +61,15 @@ function renderMap(rows) {
     }
     markersLayer.addLayer(m);
     bounds.push([r.latitude, r.longitude]);
-    heatPts.push([r.latitude, r.longitude, Math.max(0.2, (r.rssi||-90+100)/100)]);
+    heatPts.push([r.latitude, r.longitude, Math.min(1, Math.max(0.2, ((r.rssi || -90) + 100) / 100))]);
   });
   if (state.cluster) { map.addLayer(markersLayer); } else { map.removeLayer(markersLayer); markersLayer.eachLayer(l => l.addTo(map)); }
-  if (state.heat) { heatLayer.setLatLngs(heatPts); map.addLayer(heatLayer); }
+  if (state.heat) {
+    if (!map.hasLayer(heatLayer)) map.addLayer(heatLayer);
+    heatLayer.setLatLngs(heatPts);
+  } else if (map.hasLayer(heatLayer)) {
+    map.removeLayer(heatLayer);
+  }
   if (bounds.length && state.offset===0) { try { map.fitBounds(bounds, {padding:[40,40], maxZoom:16}); } catch(e){} }
   // Legend
   const types = [...new Set(rows.map(r=>r.type).filter(Boolean))];
