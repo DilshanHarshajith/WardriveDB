@@ -343,7 +343,7 @@ class Handler(SimpleHTTPRequestHandler):
                 f"{sessions.SESSION_COOKIE}={new_sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000",
             )
             self._new_sid = None
-        if self.path.endswith((".html", ".js", ".css")):
+        if self.path == "/" or self.path.endswith((".html", ".js", ".css")):
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
