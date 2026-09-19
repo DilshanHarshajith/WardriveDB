@@ -163,6 +163,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         try:
             cols = [dict(r) for r in conn.execute("SELECT name, type FROM pragma_table_info('networks')")]
+            by_type = [dict(r) for r in conn.execute(
+                "SELECT type, COUNT(*) as c FROM networks GROUP BY type ORDER BY c DESC"
+            )]
             types = [r[0] for r in conn.execute("SELECT DISTINCT type FROM networks ORDER BY type") if r[0]]
             channels = [r[0] for r in conn.execute(
                 "SELECT DISTINCT channel FROM networks WHERE channel IS NOT NULL ORDER BY channel"
@@ -176,6 +179,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "loaded": True,
                 "count": count,
                 "columns": cols,
+                "by_type": by_type,
                 "types": types,
                 "channels": channels,
                 "auth_modes": auth_modes,
