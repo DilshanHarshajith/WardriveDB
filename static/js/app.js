@@ -36,8 +36,6 @@ async function refresh() {
     renderMap(currentRows);
     renderTable();
     updateTopStats();
-    $('#tableTitle').textContent = `Results (${(data.total||0).toLocaleString()})`;
-    $('#tableInfo').textContent = `${(data.total||0).toLocaleString()} networks`;
   } catch(e) { console.error('Refresh failed:', e); }
 }
 
@@ -94,6 +92,7 @@ function bindEvents() {
   $('#mapStyle').addEventListener('change', e => { state.mapStyle=e.target.value; setTileLayer(e.target.value); });
   $('#chkHeat').addEventListener('change', e => { state.heat=e.target.checked; refresh(); });
   $('#chkCluster').addEventListener('change', e => { state.cluster=e.target.checked; refresh(); });
+  $('#chkMapLimit').addEventListener('change', e => { state.mapLimit=e.target.checked; renderTable(); });
   // Advanced
   $('#btnApplyAdv').onclick = () => { state.advSQL = $('#advSQL').value.trim(); state.offset=0; refresh(); };
   $('#btnClearAdv').onclick = () => { $('#advSQL').value=''; state.advSQL=''; state.offset=0; refresh(); };

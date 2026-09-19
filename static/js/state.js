@@ -15,6 +15,7 @@ let state = {
   mapStyle: 'osm',
   markerSize: 5, opacMin: 0.25,
   heat: false, cluster: true,
+  mapLimit: false,  // limit the device table to the current map viewport
 };
 let currentRows = [];
 let totalCount = 0;

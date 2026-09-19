@@ -7,7 +7,18 @@ function initMap() {
   markersLayer = L.markerClusterGroup({maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false, chunkedLoading: true});
   map.addLayer(markersLayer);
   heatLayer = L.heatLayer([], {radius: 18, blur: 22, maxZoom: 17});
-  map.on('moveend', debounce(()=>{ /* could sync bbox filter */ }, 300));
+  // Keep the table constrained to the current viewport while "Limit to map view" is on
+  map.on('moveend', debounce(()=>{ if (state.mapLimit) renderTable(); }, 200));
+}
+
+/* Return the rows currently visible within the map viewport (or all rows when mapLimit is off) */
+function visibleRows() {
+  if (!state.mapLimit || !currentRows.length) return currentRows;
+  if (!map) return currentRows;
+  const b = map.getBounds();
+  const s = b.getSouth(), n = b.getNorth(), w = b.getWest(), e = b.getEast();
+  return currentRows.filter(r => r.latitude != null && r.longitude != null &&
+    r.latitude >= s && r.latitude <= n && r.longitude >= w && r.longitude <= e);
 }
 
 function setTileLayer(k) {

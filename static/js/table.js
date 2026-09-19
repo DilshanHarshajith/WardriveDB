@@ -4,12 +4,13 @@ function renderTable() {
   const thead = $('#tableHead');
   const tbody = $('#tableBody');
   thead.innerHTML = DISPLAY_COLS.map(c => `<th data-col="${c}">${COL_LABELS[c]||c}${state.sort===c?(state.sortDir==='asc'?' ▲':' ▼'):''}</th>`).join('');
-  tbody.innerHTML = currentRows.map(r => `<tr data-id="${r.id||''}">${DISPLAY_COLS.map(c => `<td title="${esc(r[c])}">${esc(r[c])}</td>`).join('')}</tr>`).join('');
+  const rows = visibleRows();
+  tbody.innerHTML = rows.map(r => `<tr data-id="${r.id||''}">${DISPLAY_COLS.map(c => `<td title="${esc(r[c])}">${esc(r[c])}</td>`).join('')}</tr>`).join('');
   // Click row → highlight on map + fly to + show hover popup (no details modal)
   tbody.querySelectorAll('tr').forEach(tr => {
     tr.style.cursor = 'pointer';
     tr.onclick = () => {
-      const r = currentRows.find(x => String(x.id)===tr.dataset.id);
+      const r = rows.find(x => String(x.id)===tr.dataset.id);
       if (!r) return;
       map.closePopup(hoverPopup);
       selectedId = r.id ?? null;
@@ -36,6 +37,14 @@ function renderTable() {
       refresh();
     };
   });
+  const total = currentRows.length;
+  if (state.mapLimit) {
+    $('#tableTitle').textContent = `Visible in map (${rows.length.toLocaleString()})`;
+    $('#tableInfo').textContent = `${rows.length.toLocaleString()} of ${total.toLocaleString()} networks`;
+  } else {
+    $('#tableTitle').textContent = `Results (${total.toLocaleString()})`;
+    $('#tableInfo').textContent = `${total.toLocaleString()} networks`;
+  }
 }
 
 /* ── CSV export ────────────────────────────────────────────────────────────── */
