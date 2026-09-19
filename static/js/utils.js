@@ -2,17 +2,6 @@
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
-const qs = (o, omitEmpty=true) => {
-  const p = new URLSearchParams();
-  for (const [k,v] of Object.entries(o)) {
-    if (v == null || v === '' || (v instanceof Set && v.size===0) || (Array.isArray(v) && v.length===0)) continue;
-    if (v instanceof Set) { p.set(k, [...v].join(',')); }
-    else if (Array.isArray(v)) { p.set(k, v.join(',')); }
-    else if (v !== '') p.set(k, String(v));
-  }
-  return p.toString();
-};
-
 const debounce = (fn, ms=250) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
 
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

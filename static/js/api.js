@@ -1,20 +1,29 @@
-/* ── API calls ────────────────────────────────────────────────────────────── */
+/* ── API layer (local, in-browser) ─────────────────────────────────────────────
+ * These functions mirror the old HTTP endpoints but run entirely against the
+ * in-memory sql.js database — no network requests are made.
+ */
 async function api(path, params) {
-  const url = API + path + (params ? '?' + qs(params) : '');
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`API ${r.status}: ${await r.text()}`);
-  return r.json();
-}
-async function apiPost(path, body) {
-  const r = await fetch(API + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
-  if (!r.ok) throw new Error(`API ${r.status}: ${await r.text()}`);
-  return r.json();
+  switch (path) {
+    case '/api/meta': return await dbMeta();
+    case '/api/files': return await dbFiles();
+    case '/api/data': return await dbData(params);
+    case '/api/stats': return await dbStats(params);
+    default: throw new Error(`Unknown endpoint: ${path}`);
+  }
 }
 
-// Builds the query-string params the backend understands. The backend
-// (wardrivedb/query.py) reads snake_case names (rssi_min, channel_min, dir, …);
-// the frontend state uses camelCase, so we translate here — param-name
-// mismatches previously made channel/RSSI/date/sort filters silently no-ops.
+async function apiPost(path, body) {
+  switch (path) {
+    case '/api/query': return await dbQuery(body && body.sql);
+    case '/api/unload': return await dbUnload(body && body.file_id);
+    default: throw new Error(`Unknown endpoint: ${path}`);
+  }
+}
+
+// Builds the params object the backend understood. The query layer (db.js)
+// reads snake_case names (rssi_min, channel_min, dir, …); the frontend state
+// uses camelCase, so we translate here — param-name mismatches previously made
+// channel/RSSI/date/sort filters silently no-ops.
 function buildParams() {
   const p = {
     type: state.types, auth: state.authModes, auth_only: state.authOnlyContains,

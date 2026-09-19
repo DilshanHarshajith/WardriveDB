@@ -1,11 +1,12 @@
 # WardriveDB — Wardriving Dashboard
 
-A lightweight, self-contained web dashboard for exploring Wi-Fi wardriving data
-captured with [Wigle](https://wigle.net/) or similar tools. No external
-dependencies beyond Python 3 — just run and upload.
+A lightweight, **static, fully client-side** web dashboard for exploring Wi-Fi
+wardriving data captured with [Wigle](https://wigle.net/) or similar tools.
+No server required — it runs entirely in your browser.
 
-**Everything runs in memory.** Nothing is written to disk. Upload a dataset,
-explore it, and on restart you start fresh.
+**Everything runs in memory.** Data is parsed and stored in an in-browser
+SQLite engine (sql.js / WebAssembly); nothing leaves your machine. Upload a
+dataset, explore it, and reload the page to start fresh.
 
 ## Features
 
@@ -18,19 +19,25 @@ explore it, and on restart you start fresh.
 - **CSV export** — download the current view as a CSV file.
 - **Keyboard shortcuts** — `/` search, `F` toggle sidebar, `?` help.
 
-## Quick Start
+## Hosting on GitHub Pages
+
+This is a plain static site — no build step. Just push the repo and enable
+GitHub Pages:
+
+1. Push this repository to GitHub.
+2. In **Settings → Pages**, set the source to **Deploy from a branch**
+   (e.g. `main`, root `/`).
+3. Open the published URL and upload your data.
+
+Everything needed to run locally (Leaflet map, heatmap, and the sql.js
+WebAssembly engine) is vendored or loaded from CDNs, so no configuration is
+required.
+
+You can also test locally with any static file server:
 
 ```bash
-git clone <url> && cd WardriveDB
-./start.sh
-```
-
-Then open **http://localhost:8765** in your browser and upload your data.
-
-You can also bypass the UI upload by pointing `WARDRIVING_DB` at an existing file:
-
-```bash
-WARDRIVING_DB=/path/to/wardriving.db ./start.sh
+python3 -m http.server 8765
+# open http://localhost:8765
 ```
 
 ## Supported Formats
@@ -40,7 +47,9 @@ WARDRIVING_DB=/path/to/wardriving.db ./start.sh
 | **SQLite `.db`** | Must contain a `networks` table. Columns are mapped automatically to `mac`, `ssid`, `auth_mode`, `first_seen`, `channel`, `frequency`, `rssi`, `latitude`, `longitude`, `altitude`/`accuracy`, `type`; both `altitude_meters`/`accuracy_meters` (Wigle export) and `altitude`/`accuracy` names are recognised. |
 | **Wigle CSV** | Standard Wigle export (`WigleWifi_1.x`). The metadata line is skipped automatically. |
 
-Column mappings for both formats are editable in `wardrivedb/columns.json` — add an entry whose value is the target `networks` column, or `null` to ignore the source column.
+Column mappings for both formats are defined in `static/js/db.js`
+(`CSV_COL_MAP` / `DB_COL_MAP`) — add an entry whose value is the target
+`networks` column, or `null` to ignore the source column.
 
 ## Keyboard Shortcuts
 
@@ -50,61 +59,20 @@ Column mappings for both formats are editable in `wardrivedb/columns.json` — a
 | `F` | Toggle sidebar |
 | `?` | Show help |
 
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8765` | Server port |
-| `WARDRIVING_DB` | *(empty)* | Path to a SQLite DB to load on startup (skips upload UI) |
-
-## Docker
-
-A Dockerfile is provided for containerised deployment.
-
-```bash
-docker build -t wardrivedb .
-docker run -p 8765:8765 wardrivedb
-```
-
-You can mount a local DB into the container so it loads on startup:
-
-```bash
-docker run -p 8765:8765 \
-  -e WARDRIVING_DB=/data/wardriving.db \
-  -v /path/to/wardriving.db:/data/wardriving.db:ro \
-  wardrivedb
-```
-
-Or pass a custom port:
-
-```bash
-docker run -p 9000:9000 -e PORT=9000 wardrivedb
-```
-
 ## Project Layout
 
 ```
 WardriveDB/
 ├── index.html           # Page shell (markup only — CSS & JS live in static/)
-├── server.py            # Thin shim: delegates to wardrivedb.server.main()
-├── start.sh             # One-click launcher
-├── wardrivedb/          # Python package (backend)
-│   ├── __init__.py
-│   ├── __main__.py      # Enables `python -m wardrivedb`
-│   ├── config.py        # Constants, regexes, loads column maps from columns.json
-│   ├── columns.json     # CSV header / .db column → networks column mappings
-│   ├── db.py            # SQLite in-memory connection & schema
-│   ├── ingest.py        # CSV / .db upload parsing + loading
-│   ├── query.py         # Shared filter → SQL WHERE builder
-│   ├── handler.py       # HTTP handler + API endpoints + static serving
-│   └── server.py        # create_server() + main() startup
 ├── static/
-│   ├── css/style.css    # Dashboard styles (extracted from inline <style>)
-│   └── js/              # Plain scripts loaded in dependency order
-│       ├── config.js    # API base, columns, colors, tile configs
+│   ├── css/style.css    # Dashboard styles
+│   ├── vendor/          # sql.js (SQLite → WebAssembly), vendored locally
+│   └── js/
+│       ├── config.js    # Columns, colors, tile configs
 │       ├── state.js     # Shared global state
 │       ├── utils.js     # Helpers: $, debounce, esc, CSV, popups
-│       ├── api.js       # Fetch wrappers + URL param builder
+│       ├── db.js        # In-browser data layer: sql.js init, schema, ingest, filters, query
+│       ├── api.js       # Local "API" wrappers + URL param builder
 │       ├── map.js       # Map init, layers, markers, legend
 │       ├── sidebar.js   # Filter chips + top stats
 │       ├── table.js     # Results table + sort + export
@@ -113,19 +81,6 @@ WardriveDB/
 │       └── app.js       # init(), events, refresh, boot
 └── README.md
 ```
-
-`python server.py` and `python -m wardrivedb` are equivalent entrypoints — `start.sh`
-prefers the package entry and falls back to the shim.
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/meta` | GET | Dataset metadata: count, types, auth modes, date range |
-| `/api/data` | GET | Row data with filters, sorting, pagination |
-| `/api/stats` | GET | Aggregated stats (type/channel/auth histograms, RSSI, dates, bounds) |
-| `/api/upload` | POST | Upload a `.db` or `.csv` file (`multipart/form-data`, field `file`) |
-| `/api/query` | POST | Run a read-only SQL query (`{"sql": "SELECT ..."}`) |
 
 ## License
 

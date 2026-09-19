@@ -25,19 +25,47 @@ async function doUpload(files) {
   $('#uploadBar').style.width='10%';
 
   const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
-  setUploadMsg(`Uploading ${fileArray.length} file(s) (${(totalSize/1024/1024).toFixed(1)} MB total)…`);
+  const totalMB = (totalSize/1024/1024).toFixed(1);
+  setUploadMsg(`Loading ${fileArray.length} file(s) (${totalMB} MB total)…`);
+
+  const results = [];
+  let total_count = 0;
+  const errors = [];
+  let doneBytes = 0;
 
   try {
-    const fd = new FormData();
-    fileArray.forEach(file => fd.append('file', file));
+    for (const file of fileArray) {
+      $('#uploadBar').style.width = '15%';
+      const isDb = /\.db$/i.test(file.name);
+      try {
+        let count;
+        if (isDb) {
+          count = await loadDbFile(file);
+        } else {
+          const text = await file.text();
+          count = await loadCsv(text, file.name);
+        }
+        results.push({ filename: file.name, count });
+        total_count += count;
+      } catch (e) {
+        results.push({ filename: file.name, error: e.message || String(e) });
+        errors.push(file.name);
+      }
+      doneBytes += file.size;
+      $('#uploadBar').style.width = Math.min(100, 15 + (doneBytes / totalSize) * 85) + '%';
+    }
 
-    $('#uploadBar').style.width='70%';
-    const r = await fetch(API + '/api/upload', {method:'POST', body: fd});
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || 'Upload failed');
+    // On single-file load keep the legacy response shape; multi-file gets array
+    let j;
+    if (fileArray.length === 1 && errors.length === 0) {
+      j = { ok: true, count: total_count, filename: fileArray[0].name };
+    } else {
+      j = { ok: errors.length === 0, files: results, total_count };
+    }
+
     if (j.ok === false) {
       const errs = (j.files || []).map(f => f.error ? `${f.filename}: ${f.error}` : f.filename).join('; ');
-      throw new Error(errs || 'Upload failed');
+      throw new Error(errs || 'Load failed');
     }
 
     $('#uploadBar').style.width='100%';
@@ -45,11 +73,8 @@ async function doUpload(files) {
     if (j.files) {
       const successful = j.files.filter(f => f.count !== undefined);
       const failed = j.files.filter(f => f.error !== undefined);
-
       let msg = `Loaded ${j.total_count.toLocaleString()} networks from ${successful.length} file(s)`;
-      if (failed.length > 0) {
-        msg += `. ${failed.length} file(s) failed.`;
-      }
+      if (failed.length > 0) msg += `. ${failed.length} file(s) failed.`;
       setUploadMsg(msg, failed.length > 0);
     } else {
       setUploadMsg(`Loaded ${(j.count||0).toLocaleString()} networks from ${j.filename}`, false);
@@ -59,7 +84,7 @@ async function doUpload(files) {
     metaInfo = await api('/api/meta');
     loadedFiles = (await api('/api/files')).files || [];
     if (!metaInfo.loaded || !metaInfo.count) {
-      setUploadMsg('Upload succeeded but no networks found.', true);
+      setUploadMsg('Load succeeded but no networks found.', true);
       return;
     }
 
@@ -71,7 +96,7 @@ async function doUpload(files) {
 
   } catch(e) {
     $('#uploadBar').style.width='0%';
-    setUploadMsg('Upload failed: ' + e.message, true);
+    setUploadMsg('Load failed: ' + e.message, true);
   } finally {
     setTimeout(()=>$('#uploadProgress').classList.add('hidden'), isUploadVisible()?1500:0);
   }
@@ -82,7 +107,7 @@ function isUploadVisible() { return !$('#uploadOverlay').classList.contains('hid
 async function unloadFile(fileId) {
   const file = loadedFiles.find(f => String(f.id) === String(fileId));
   if (!file) { console.warn('Unknown file id', fileId); return; }
-  if (!confirm(`Unload "${file.filename}" from memory? Its networks will be removed from the dashboard (you can re-upload the file anytime).`)) return;
+  if (!confirm(`Unload "${file.filename}" from memory? Its networks will be removed from the dashboard (you can re-load the file anytime).`)) return;
 
   try {
     await apiPost('/api/unload', { file_id: Number(fileId) });
