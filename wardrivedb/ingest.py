@@ -25,18 +25,17 @@ def parse_csv_upload(content: str) -> list[dict]:
     # Map CSV columns → DB columns
     rows = []
     for row in reader:
-        mapped = {}
+        # Every row gets all mapped columns; short/truncated rows (missing
+        # trailing fields like Type) just hold None for the absent column.
+        mapped = {db_col: None for db_col in CSV_COL_MAP.values() if db_col}
         for csv_col, db_col in CSV_COL_MAP.items():
             if db_col is None:
                 continue
             # Case-insensitive CSV header lookup
-            val = None
             for k, v in row.items():
                 if k.strip().lower() == csv_col:
-                    val = v
+                    mapped[db_col] = v
                     break
-            if val is not None:
-                mapped[db_col] = val
         # Coerce numeric fields
         for int_field in ("channel", "rssi"):
             v = mapped.get(int_field)
