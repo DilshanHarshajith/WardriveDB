@@ -3,3 +3,5 @@ node_modules/
 *.db
 *.csv
 .DS_Store
+__pycache__/
+*.py[cod]
