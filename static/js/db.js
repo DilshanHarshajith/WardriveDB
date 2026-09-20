@@ -383,13 +383,18 @@ function parseCsvRows(cells) {
   for (let r = start + 1; r < cells.length; r++) {
     const src = cells[r];
     if (!src || src.length === 1 && src[0] === '') continue;
+    // Every row gets all mapped columns; short/truncated rows (missing
+    // trailing fields like Type) just hold null for the absent column so
+    // column keys stay consistent across rows.
     const mapped = {};
+    for (const [, dbCol] of Object.entries(CSV_COL_MAP)) {
+      if (dbCol !== null) mapped[dbCol] = null;
+    }
     for (const [csvCol, dbCol] of Object.entries(CSV_COL_MAP)) {
       if (dbCol === null) continue;
       const i = idx[csvCol];
       if (i === undefined) continue;
-      const v = src[i] === undefined ? null : src[i];
-      if (v != null) mapped[dbCol] = v;
+      if (src[i] !== undefined) mapped[dbCol] = src[i];
     }
     for (const f of ['channel', 'rssi']) {
       const v = mapped[f];
