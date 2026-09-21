@@ -27,6 +27,11 @@ function renderTable() {
         });
       }
     };
+    tr.ondblclick = () => {
+      const r = rows.find(x => String(x.id)===tr.dataset.id);
+      if (!r) return;
+      showDetails(r);
+    };
   });
   // Column sort
   thead.querySelectorAll('th').forEach(th => {
