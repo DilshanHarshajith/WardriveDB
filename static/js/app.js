@@ -96,6 +96,10 @@ function bindEvents() {
   // Advanced
   $('#btnApplyAdv').onclick = () => { state.advSQL = $('#advSQL').value.trim(); state.offset=0; refresh(); };
   $('#btnClearAdv').onclick = () => { $('#advSQL').value=''; state.advSQL=''; state.offset=0; refresh(); };
+  $('#advCols').addEventListener('click', e => {
+    const col = e.target.closest('.sql-col');
+    if (col) insertSQL(col.dataset.col, $('#advSQL'));
+  });
   // Buttons
   $('#btnResetFilters').onclick = resetAllFilters;
   $('#btnFitBounds').onclick = fitBounds;

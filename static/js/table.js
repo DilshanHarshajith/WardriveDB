@@ -3,7 +3,7 @@ const DISPLAY_COLS = ['first_seen','ssid','mac','type','auth_mode','channel','rs
 function renderTable() {
   const thead = $('#tableHead');
   const tbody = $('#tableBody');
-  thead.innerHTML = DISPLAY_COLS.map(c => `<th data-col="${c}">${COL_LABELS[c]||c}${state.sort===c?(state.sortDir==='asc'?' ▲':' ▼'):''}</th>`).join('');
+  thead.innerHTML = DISPLAY_COLS.map(c => `<th data-col="${c}" title="${esc(COL_LABELS[c]||c)}">${esc(c)}${state.sort===c?(state.sortDir==='asc'?' ▲':' ▼'):''}</th>`).join('');
   const rows = visibleRows();
   tbody.innerHTML = rows.map(r => `<tr data-id="${r.id||''}">${DISPLAY_COLS.map(c => `<td title="${esc(r[c])}">${esc(r[c])}</td>`).join('')}</tr>`).join('');
   // Click row → highlight on map + fly to + show hover popup (no details modal)
