@@ -252,6 +252,26 @@ async function dbMeta() {
   return { loaded: true, count, columns, types, channels, auth_modes, rssi_range, date_range, by_type };
 }
 
+/* ── /api/schema ─────────────────────────────────────────────────────────── */
+async function dbSchema() {
+  await ensureDb();
+  const internalTables = new Set(['files']);
+  const internalColumns = new Set(['id', 'file_id']);
+  const names = selectAll(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+  ).map(r => r.name);
+  const tables = names.map(name => {
+    const quoted = '"' + String(name).replace(/"/g, '""') + '"';
+    const escaped = String(name).replace(/'/g, "''");
+    const columns = selectAll(`SELECT name, type, pk FROM pragma_table_info('${escaped}')`)
+      .map(c => ({ ...c, internal: internalColumns.has(c.name) }));
+    let row_count = null;
+    try { row_count = selectScalar(`SELECT COUNT(*) FROM ${quoted}`); } catch (e) { /* ignore */ }
+    return { name, columns, row_count, internal: internalTables.has(name) };
+  });
+  return { tables };
+}
+
 /* ── /api/files ──────────────────────────────────────────────────────────── */
 async function dbFiles() {
   await ensureDb();

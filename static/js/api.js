@@ -5,6 +5,7 @@
 async function api(path, params) {
   switch (path) {
     case '/api/meta': return await dbMeta();
+    case '/api/schema': return await dbSchema();
     case '/api/files': return await dbFiles();
     case '/api/data': return await dbData(params);
     case '/api/stats': return await dbStats(params);

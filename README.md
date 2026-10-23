@@ -15,7 +15,7 @@ dataset, explore it, and reload the page to start fresh.
 - **Rich filters** — network type, auth mode, channel, RSSI, date range, frequency, accuracy, GPS bounding box.
 - **Search & regex** — search SSIDs, MACs, and auth modes; use `/regex/` for pattern matching.
 - **Advanced SQL** — free-form SQL WHERE fragment applied to the dataset.
-- **Read-only SQL console** — run `SELECT` queries against the loaded data.
+- **Read-only SQL console** — run `SELECT` queries against the loaded data, with a clickable table/column schema browser.
 - **CSV export** — download the current view as a CSV file.
 - **Keyboard shortcuts** — `/` search, `F` toggle sidebar, `?` help.
 
