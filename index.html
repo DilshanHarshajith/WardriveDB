@@ -229,16 +229,23 @@
       <button class="btn" id="btnCloseSQL">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field">
-        <label>SELECT query (read‑only; runs against the loaded data)</label>
-        <textarea id="sqlText" rows="5">SELECT * FROM networks LIMIT 100</textarea>
+      <div class="sql-editor">
+        <aside class="sql-schema" id="sqlSchema">
+          <div class="sql-hint">Loading schema…</div>
+        </aside>
+        <div class="sql-main">
+          <div class="field">
+            <label>SELECT query (read‑only; runs against the loaded data)</label>
+            <textarea id="sqlText" rows="5">SELECT * FROM networks LIMIT 100</textarea>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-primary" id="btnRunSQL">▶ Run</button>
+            <button class="btn" id="btnExportSQL">⤓ Export results</button>
+            <span id="sqlMsg" class="msg"></span>
+          </div>
+          <div class="results hidden" id="sqlResults"></div>
+        </div>
       </div>
-      <div class="action-row">
-        <button class="btn btn-primary" id="btnRunSQL">▶ Run</button>
-        <button class="btn" id="btnExportSQL">⤓ Export results</button>
-        <span id="sqlMsg" class="msg"></span>
-      </div>
-      <div class="results hidden" id="sqlResults"></div>
     </div>
   </div>
 </div>

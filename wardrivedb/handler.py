@@ -56,6 +56,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._handle_api_stats(qs)
         elif parsed.path == "/api/meta":
             self._handle_api_meta()
+        elif parsed.path == "/api/schema":
+            self._handle_api_schema()
         elif parsed.path == "/api/files":
             self._handle_api_files()
         else:
@@ -186,6 +188,38 @@ class Handler(SimpleHTTPRequestHandler):
                 "rssi_range": dict(rssi_range) if rssi_range else {},
                 "date_range": dict(date_range) if date_range else {},
             })
+        except Exception as e:
+            self._json({"error": str(e)}, 500)
+
+    # ── /api/schema ────────────────────────────────────────────────────────
+    def _handle_api_schema(self):
+        """Describe the queryable tables so the SQL editor can show names/types."""
+        conn = get_conn()
+        internal_tables = {"files"}
+        internal_columns = {"id", "file_id"}
+        try:
+            tables = []
+            names = [r[0] for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            )]
+            for name in names:
+                cols = [dict(r) for r in conn.execute(
+                    "SELECT name, type, pk FROM pragma_table_info(?)", (name,)
+                )]
+                for col in cols:
+                    col["internal"] = col["name"] in internal_columns
+                quoted = '"' + name.replace('"', '""') + '"'
+                try:
+                    row_count = conn.execute(f"SELECT COUNT(*) FROM {quoted}").fetchone()[0]
+                except Exception:
+                    row_count = None
+                tables.append({
+                    "name": name,
+                    "columns": cols,
+                    "row_count": row_count,
+                    "internal": name in internal_tables,
+                })
+            self._json({"tables": tables})
         except Exception as e:
             self._json({"error": str(e)}, 500)
 

@@ -97,6 +97,28 @@ tr.selected td { background: rgba(88,166,255,.22) !important; color: var(--accen
 .modal-body { padding: 14px 16px; overflow-y: auto; flex: 1; }
 .modal-body textarea { width: 100%; min-height: 80px; }
 .modal-body .results { margin-top: 10px; max-height: 45vh; overflow: auto; }
+.sql-editor { display: flex; gap: 14px; align-items: flex-start; }
+.sql-main { flex: 1; min-width: 0; }
+.sql-schema { width: 240px; flex-shrink: 0; max-height: 55vh; overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; }
+.sql-table { margin-bottom: 10px; }
+.sql-table:last-child { margin-bottom: 0; }
+.sql-table-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.sql-table-name { background: none; border: none; color: var(--accent); font-family: var(--mono); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
+.sql-table-name:hover { text-decoration: underline; }
+.sql-starter { background: none; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); font-size: 10px; padding: 1px 5px; cursor: pointer; white-space: nowrap; }
+.sql-starter:hover { border-color: var(--accent); color: var(--accent); }
+.sql-table-cols { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.sql-col { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 11px; padding: 1px 5px; cursor: pointer; white-space: nowrap; }
+.sql-col:hover { border-color: var(--accent); color: var(--accent); }
+.sql-col .type { color: var(--muted); }
+.sql-hint { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.sql-schema .sql-hint { margin-bottom: 8px; }
+.sql-toggle { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; cursor: pointer; margin-bottom: 8px; }
+.sql-toggle input { accent-color: var(--accent); }
+@media (max-width: 720px) {
+  .sql-editor { flex-direction: column; }
+  .sql-schema { width: 100%; max-height: 22vh; }
+}
 .modal-foot { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
 .modal-foot .msg { font-size: 12px; color: var(--muted); }
 .hidden { display: none !important; }
