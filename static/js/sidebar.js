@@ -15,6 +15,21 @@ function renderSidebar() {
   }
   // Stats pills
   updateTopStats();
+  renderAdvCols();
+}
+
+// Clickable list of the real networks columns, so the advanced filter doesn't
+// require the user to already know the DB schema.
+function renderAdvCols() {
+  const el = $('#advCols');
+  if (!el) return;
+  const cols = (metaInfo?.columns || [])
+    .filter(c => c.name && !['id', 'file_id'].includes(c.name));
+  el.innerHTML = cols.length
+    ? '<span class="adv-cols-label">Columns:</span>' + cols.map(c =>
+        `<button type="button" class="sql-col" data-col="${esc(c.name)}" title="${esc(c.type||'')} — click to insert">${esc(c.name)}</button>`
+      ).join('')
+    : '';
 }
 
 function renderFileCheckboxes() {
