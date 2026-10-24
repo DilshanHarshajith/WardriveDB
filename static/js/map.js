@@ -44,6 +44,23 @@ function highlightSelection() {
   }
 }
 
+/* Focus a marker selected from the table: pan/zoom to it and show its popup.
+   markersLayer.zoomToShowLayer only works while the cluster group is on the map,
+   so handle the unclustered case (markers added directly to the map) manually. */
+function focusMarker(m, r) {
+  const show = () => {
+    highlightSelection();
+    hoverPopup.setLatLng([r.latitude, r.longitude]).setContent(popupHtmlFor(r)).openOn(map);
+  };
+  if (state.cluster) {
+    // spiderfies or zooms to the marker, then calls the callback
+    markersLayer.zoomToShowLayer(m, show);
+  } else {
+    map.flyTo([r.latitude, r.longitude], Math.max(map.getZoom(), 16));
+    show();
+  }
+}
+
 function renderMap(rows) {
   markersLayer.clearLayers();
   markerById.clear();
