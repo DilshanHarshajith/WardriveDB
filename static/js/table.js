@@ -17,15 +17,7 @@ function renderTable() {
       highlightSelection();
       tr.scrollIntoView({behavior:'smooth', block:'nearest'});
       const m = markerById.get(String(r.id));
-      if (m && r.latitude && r.longitude) {
-        // Expand the cluster (if any) and show the popup on the specific marker
-        // zoomToShowLayer spiderfies or zooms to the marker, then calls the callback
-        markersLayer.zoomToShowLayer(m, () => {
-          // Spiderfied markers lose inline style — re-highlight
-          highlightSelection();
-          hoverPopup.setLatLng([r.latitude, r.longitude]).setContent(popupHtmlFor(r)).openOn(map);
-        });
-      }
+      if (m && r.latitude && r.longitude) focusMarker(m, r);
     };
     tr.ondblclick = () => {
       const r = rows.find(x => String(x.id)===tr.dataset.id);
